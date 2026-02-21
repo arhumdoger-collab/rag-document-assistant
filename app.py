@@ -41,11 +41,12 @@ def process_pdf(file_bytes):
     full_text = " ".join([doc.page_content for doc in documents])
     return vectorstore.as_retriever(), full_text
 
-
-llm = ChatGroq(
-    groq_api_key=os.getenv("GROQ_API_KEY"),
-    model_name="llama-3.3-70b-versatile"
-)
+def get_llm():
+    api_key = os.getenv("GROQ_API_KEY") or st.secrets.get("GROQ_API_KEY", "")
+    return ChatGroq(
+        groq_api_key=api_key,
+        model_name="llama-3.3-70b-versatile"
+    )
 
 uploaded_file = st.file_uploader("📂 PDF file upload karo", type="pdf")
 
@@ -73,7 +74,6 @@ if uploaded_file is not None:
     if btn_translate:
         st.session_state.active_feature = "translate"
 
-    # Q&A Feature
     if st.session_state.active_feature == "qa":
         st.markdown("### 🔍 Document se kuch bhi poochho!")
         if "chat_history" not in st.session_state:
@@ -81,6 +81,7 @@ if uploaded_file is not None:
         question = st.text_input("Apna sawaal likho:", key="qa_input")
         if question:
             with st.spinner("Jawab dhundh raha hoon..."):
+                llm = get_llm()
                 docs = retriever.invoke(question)
                 context = "\n\n".join([d.page_content for d in docs])
                 prompt = f"""Context ke basis pe jawab do:\n\nContext:\n{context}\n\nSawaal: {question}\n\nJawab:"""
@@ -91,20 +92,20 @@ if uploaded_file is not None:
             st.markdown(f'<div class="chat-container"><div class="user-bubble">🧑 {chat["q"]}</div></div>', unsafe_allow_html=True)
             st.markdown(f'<div class="chat-container"><div class="ai-bubble">🤖 {chat["a"]}</div></div>', unsafe_allow_html=True)
 
-    # Summary Feature
     elif st.session_state.active_feature == "summary":
         st.markdown("### 📝 Document Summary")
         with st.spinner("Summary ban rahi hai..."):
+            llm = get_llm()
             prompt = f"Is document ka aik acha aur detailed summary banao:\n\n{full_text[:4000]}"
             response = llm.invoke(prompt)
             st.markdown(f'<div class="chat-container"><div class="ai-bubble">🤖 {response.content}</div></div>', unsafe_allow_html=True)
 
-    # Translate Feature
     elif st.session_state.active_feature == "translate":
         st.markdown("### 🌐 Document Translate karo")
         language = st.selectbox("Language chunno:", ["Urdu", "Arabic", "French", "Spanish", "Chinese", "German"])
         if st.button("Translate karo!"):
             with st.spinner(f"{language} mein translate ho raha hai..."):
+                llm = get_llm()
                 prompt = f"Is document ko {language} mein translate karo:\n\n{full_text[:4000]}"
                 response = llm.invoke(prompt)
                 st.markdown(f'<div class="chat-container"><div class="ai-bubble">🤖 {response.content}</div></div>', unsafe_allow_html=True)
