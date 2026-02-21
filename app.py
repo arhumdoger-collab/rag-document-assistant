@@ -41,8 +41,9 @@ def process_pdf(file_bytes):
     full_text = " ".join([doc.page_content for doc in documents])
     return vectorstore.as_retriever(), full_text
 
+
 llm = ChatGroq(
-    api_key=os.getenv("GROQ_API_KEY"),
+    groq_api_key=os.getenv("GROQ_API_KEY"),
     model_name="llama-3.3-70b-versatile"
 )
 
